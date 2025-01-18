@@ -1,0 +1,354 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Resizable Sohrab Code Editor for HTML & CSS</title>
+
+  <!-- Prism.js for syntax highlighting -->
+  <link href="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/themes/prism.min.css" rel="stylesheet">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.5/codemirror.min.css">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.5/theme/dracula.min.css">
+  <style>
+    body {
+      font-family: 'Arial', sans-serif;
+      margin: 0;
+      padding: 0;
+      display: flex;
+      flex-direction: column;
+      height: 100vh;
+      background-color: #f4f4f9;
+    }
+
+    header {
+      background-color: #4CAF50;
+      color: white;
+      padding: 15px;
+      text-align: center;
+      font-size: 1.5em;
+    }
+
+    .editor-container {
+      display: flex;
+      height: calc(100vh - 60px); /* Full height minus header */
+      width: 100%;
+      padding: 10px;
+      justify-content: space-between; /* Space out the editors */
+    }
+
+    .editor-wrapper,
+    .output-wrapper {
+      height: 100%;
+      overflow: hidden;
+      position: relative;
+      border-radius: 5px;
+      box-sizing: border-box;
+      padding: 10px;
+    }
+
+    .editor-wrapper {
+      background-color: #333; /* Dark background for HTML and CSS editors */
+    }
+
+    .output-wrapper {
+      background-color: #fff;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      flex-direction: column;
+    }
+
+    .editor,
+    .preview {
+      width: 100%;
+      height: 100%;
+      font-family: 'Consolas', 'Courier New', monospace;
+      font-size: 14px;
+      border: none;
+      padding: 10px;
+      background-color: #f7f7f7;
+      border-radius: 5px;
+      resize: none;
+      box-sizing: border-box;
+    }
+
+    textarea {
+      width: 100%;
+      height: 100%;
+      font-family: 'Consolas', 'Courier New', monospace;
+      font-size: 14px;
+      color: #fff;
+      border: none;
+      outline: none;
+      background-color: #333; /* Dark background for the editors */
+      border-radius: 5px;
+      padding: 10px;
+      resize: none;
+    }
+
+    button {
+      background-color: #4CAF50;
+      color: white;
+      border: none;
+      padding: 10px 20px;
+      cursor: pointer;
+      border-radius: 5px;
+      font-size: 1em;
+      margin-top: 10px;
+      width: 100%;
+    }
+
+    button:hover {
+      background-color: #45a049;
+    }
+
+    .drag-bar {
+      cursor: ew-resize;
+      background-color: #ddd;
+      width: 10px;
+      height: 100%;
+      position: absolute;
+      top: 0;
+      bottom: 0;
+      right: 0;
+    }
+
+    .code-title {
+      font-size: 1.2em;
+      margin-bottom: 10px;
+    }
+
+    .preview {
+      border: 1px solid #ccc;
+      height: 100%;
+      padding: 0;
+    }
+
+    .editor-container .editor-wrapper {
+      min-width: 30%;
+      flex: 1;
+    }
+
+    .editor-container .output-wrapper {
+      min-width: 30%;
+      flex: 1;
+    }
+
+    .preview iframe {
+      width: 100%;
+      height: 100%;
+      border: none;
+    }
+
+    /* Dark mode styles */
+    .dark-mode {
+      background-color: #333;
+      color: #f7f7f7;
+    }
+
+    .dark-mode textarea {
+      background-color: #444;
+      color: #f7f7f7;
+    }
+
+    .dark-mode .code-title {
+      color: #f7f7f7;
+    }
+
+    /* Font-family selector styles */
+    select {
+      padding: 5px;
+      font-size: 1em;
+      margin: 10px;
+    }
+  </style>
+</head>
+<body>
+
+  <header>
+    Sohrab HTML & CSS Code Editor
+  </header>
+
+  <div class="editor-container">
+    <div class="editor-wrapper" id="html-editor-container">
+      <div class="code-title">HTML Editor</div>
+      <textarea id="html-editor" placeholder="Write your HTML code here..."></textarea>
+      <div class="drag-bar" id="html-resize"></div>
+    </div>
+
+    <div class="output-wrapper">
+      <div class="code-title">Preview</div>
+      <div class="preview" id="preview-area">
+        <!-- This is where the output will be shown -->
+      </div>
+    </div>
+
+    <div class="editor-wrapper" id="css-editor-container">
+      <div class="code-title">CSS Editor</div>
+      <textarea id="css-editor" placeholder="Write your CSS code here..."></textarea>
+      <div class="drag-bar" id="css-resize"></div>
+    </div>
+  </div>
+
+  <div style="display: flex; justify-content: space-between; padding: 10px;">
+    <button onclick="saveFile()">Save HTML</button>
+    <button onclick="saveCSS()">Save CSS</button>
+    <button onclick="clearAll()">Clear All</button>
+    <button onclick="toggleDarkMode()">Toggle Dark Mode</button>
+    <button onclick="refreshPreview()">Refresh Preview</button>
+    <select onchange="changeFontFamily(event)">
+      <option value="Consolas">Consolas</option>
+      <option value="Courier New">Courier New</option>
+      <option value="Monaco">Monaco</option>
+      <option value="Arial">Arial</option>
+    </select>
+  </div>
+
+  <!-- Include necessary JS libraries -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.5/codemirror.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.5/mode/xml/xml.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.5/mode/css/css.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.5/addon/hint/show-hint.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.5/addon/hint/xml-hint.min.js"></script>
+
+  <script>
+    // Initialize CodeMirror editors for HTML and CSS
+    const htmlEditor = CodeMirror.fromTextArea(document.getElementById('html-editor'), {
+      mode: "xml",
+      theme: "dracula",
+      lineNumbers: true,
+      autoCloseTags: true,
+      matchBrackets: true,
+      extraKeys: {"Ctrl-Space": "autocomplete"},
+      lineWrapping: true
+    });
+
+    const cssEditor = CodeMirror.fromTextArea(document.getElementById('css-editor'), {
+      mode: "css",
+      theme: "dracula",
+      lineNumbers: true,
+      autoCloseBrackets: true,
+      lineWrapping: true
+    });
+
+    // Real-time Preview Update
+    function updatePreview() {
+      const htmlCode = htmlEditor.getValue();
+      const cssCode = cssEditor.getValue();
+
+      const iframe = document.createElement('iframe');
+      iframe.style.width = '100%';
+      iframe.style.height = '100%';
+      document.getElementById('preview-area').innerHTML = '';
+      document.getElementById('preview-area').appendChild(iframe);
+
+      const iframeDoc = iframe.contentWindow.document;
+      iframeDoc.open();
+      iframeDoc.write(`
+        <html>
+        <head>
+          <style>
+            ${cssCode}
+          </style>
+        </head>
+        <body>
+          ${htmlCode}
+        </body>
+        </html>
+      `);
+      iframeDoc.close();
+    }
+
+    // Save the HTML code
+    function saveFile() {
+      const htmlCode = htmlEditor.getValue();
+      const cssCode = cssEditor.getValue();
+
+      const blob = new Blob([htmlCode, '\n\n<style>\n' + cssCode + '\n</style>'], { type: 'text/html' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = 'index.html';
+      a.click();
+      URL.revokeObjectURL(url);
+    }
+
+    // Save the CSS code
+    function saveCSS() {
+      const cssCode = cssEditor.getValue();
+
+      const blob = new Blob([cssCode], { type: 'text/css' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = 'style.css';
+      a.click();
+      URL.revokeObjectURL(url);
+    }
+
+    // Clear all code
+    function clearAll() {
+      htmlEditor.setValue('');
+      cssEditor.setValue('');
+      updatePreview();
+    }
+
+    // Refresh the preview
+    function refreshPreview() {
+      updatePreview();
+    }
+
+    // Toggle Dark/Light Mode
+    function toggleDarkMode() {
+      document.body.classList.toggle('dark-mode');
+      document.querySelectorAll('.code-title').forEach(el => {
+        el.classList.toggle('dark-mode');
+      });
+      document.querySelectorAll('.editor').forEach(el => {
+        el.classList.toggle('dark-mode');
+      });
+    }
+
+    // Change font family
+    function changeFontFamily(event) {
+      const selectedFont = event.target.value;
+      document.querySelectorAll('.editor').forEach(el => {
+        el.style.fontFamily = selectedFont;
+      });
+    }
+
+    // Add basic HTML structure when "!" is typed
+    htmlEditor.on('inputRead', function() {
+      const content = htmlEditor.getValue();
+      if (content.trim().endsWith('!')) {
+        htmlEditor.setValue(`
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Document</title>
+</head>
+<body>
+</body>
+</html>
+        `);
+      }
+    });
+
+    // Autocomplete HTML Tags (Already enabled in CodeMirror)
+    htmlEditor.on("inputRead", function() {
+      const code = htmlEditor.getValue();
+      const lastChar = code.slice(-1);
+      if (lastChar === '<') {
+        htmlEditor.showHint({hint: CodeMirror.hint.xml});
+      }
+    });
+
+    // Initialize the preview
+    updatePreview();
+    
+  </script>
+
+</body>
+  </html>
